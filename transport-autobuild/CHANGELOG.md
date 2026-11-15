@@ -1,4 +1,13 @@
-# Transport Autopilot 1.1.0
+# Transport Autopilot
+
+## Unreleased source changes
+
+- On Windows, the updater now validates its private cache by its actual owner
+  and access rules, so a cache it created can be checked again. Isolated update
+  workers also use UTF-8 for diagnostics. These fixes are not in the existing
+  signed 1.1.0 package; a future signed release is needed to deliver them.
+
+## 1.1.0
 
 - A clearer panel with Overview, Settings and Projects tabs. See what needs
   attention, adjust your choices, and follow construction in one place.

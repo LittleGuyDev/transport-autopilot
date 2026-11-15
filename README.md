@@ -17,6 +17,8 @@ Subscribe, wait for the download, then run the included installer once with the 
 
 Current release: **1.1.0**, for **Geoplanetical 1.1.3 / Steam build 26651281**, on Windows and native Mac. See [compatibility and validation](transport-autobuild/VALIDATION.md) for tested behavior and limits. New game versions need a compatibility review.
 
+The `main` branch includes an unreleased Windows updater fix. The existing signed 1.1.0 package predates that fix; publishing this source repository has not changed the Workshop download.
+
 Find the panel in **Transport Room → Build → Transport Autopilot**, **Settings → Game**, or the game's search. Saving settings and starting construction are separate actions. Disabling automation does not cancel existing projects.
 
 ## Source and contributions
