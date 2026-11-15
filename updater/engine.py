@@ -524,11 +524,11 @@ def run_updates(state_dir, registrations, game, profile, *, public_key,
                 total += package.bytes_hashed * 4
             def invoke(package, apply):
                 product = package.manifest['product']
-                command = [str(python), '-I', '-S', str(RUNTIME), '--worker-apply' if apply else '--worker-check',
+                command = [str(python), '-I', '-S', '-X', 'utf8', str(RUNTIME), '--worker-apply' if apply else '--worker-check',
                            '--snapshot', str(package.root), '--product', product,
                            '--game', str(game), '--profile', str(profile),
                            '--key-json', json.dumps(public_key, separators=(',', ':'))]
-                result = runner(command, shell=False, capture_output=True, text=True, check=False)
+                result = runner(command, shell=False, capture_output=True, text=True, encoding='utf-8', check=False)
                 if result.returncode != 0:
                     raise UpdateError('Update failed before game launch: ' + (result.stderr or result.stdout)[-4000:])
                 status = _json(result.stdout)

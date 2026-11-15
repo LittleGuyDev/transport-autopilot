@@ -546,6 +546,19 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(second.executable, self.exe)
         self.assertTrue((self.profile / 'mods/transport-autopilot/mod.json').is_file())
 
+    def test_isolated_workers_use_explicit_utf8_for_non_ascii_diagnostics(self):
+        def failing_worker(command, **options):
+            self.assertEqual(command[1:6], ['-I', '-S', '-X', 'utf8', str(engine.RUNTIME)])
+            self.assertEqual(options['encoding'], 'utf-8')
+            # Run an isolated real Python child: Windows otherwise uses its
+            # ANSI code page because -I ignores a parent's PYTHONUTF8 setting.
+            child = command[:5] + ['-c', 'import sys; sys.stderr.write("blocked \u2014 test"); sys.exit(1)']
+            return subprocess.run(child, **options)
+        with self.assertRaisesRegex(engine.UpdateError, 'blocked \u2014 test'):
+            engine.run_updates(self.state, [{'product': 'transport-autopilot', 'package_root': self.package}],
+                               self.archive, self.profile, public_key=self.signer.public_key,
+                               python=Path(sys.executable).resolve(), runner=failing_worker)
+
     def test_digest_identity_updates_same_semver_and_rejects_rollback(self):
         args = (self.state, [{'product': 'transport-autopilot', 'package_root': self.package}], self.archive, self.profile)
         engine.run_updates(*args, public_key=self.signer.public_key, python=Path(sys.executable).resolve())

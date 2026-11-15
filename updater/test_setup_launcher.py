@@ -690,6 +690,13 @@ class SetupLauncherTests(unittest.TestCase):
         self.assertFalse((self.state / 'last-error.txt').exists())
 
     @unittest.skipUnless(os.name == 'nt', 'Native Windows security API acceptance')
+    def test_windows_existing_inherited_cache_is_rejected(self):
+        shared = self.root / 'untrusted-existing-cache'
+        shared.mkdir()
+        with self.assertRaisesRegex(ValueError, 'owned exclusively'):
+            setup._private(shared)
+
+    @unittest.skipUnless(os.name == 'nt', 'Native Windows security API acceptance')
     def test_windows_private_cache_can_be_revalidated(self):
         self.enroll()
         setup._private(self.state)

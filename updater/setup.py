@@ -118,22 +118,58 @@ def _windows_private(path, created=False):
             existing = ctypes.create_string_buffer(needed.value)
             if not advapi.GetFileSecurityW(str(path), 0x00000005, existing, needed, ctypes.byref(needed)):
                 raise ctypes.WinError(ctypes.get_last_error())
-            rendered = wintypes.LPWSTR()
-            advapi.ConvertSecurityDescriptorToStringSecurityDescriptorW.argtypes = [
-                ctypes.c_void_p, wintypes.DWORD, wintypes.DWORD,
-                ctypes.POINTER(wintypes.LPWSTR), ctypes.c_void_p]
-            advapi.ConvertSecurityDescriptorToStringSecurityDescriptorW.restype = wintypes.BOOL
-            if not advapi.ConvertSecurityDescriptorToStringSecurityDescriptorW(
-                    existing, 1, 0x00000005, ctypes.byref(rendered), None):
+            # Compare the native descriptor, not its SDDL spelling: Windows may
+            # render equivalent rights/SIDs/auto-inheritance flags differently.
+            owner, existing_dacl = ctypes.c_void_p(), ctypes.c_void_p()
+            defaulted, present = wintypes.BOOL(), wintypes.BOOL()
+            control, revision = wintypes.WORD(), wintypes.DWORD()
+            advapi.GetSecurityDescriptorOwner.argtypes = [ctypes.c_void_p,
+                ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(wintypes.BOOL)]
+            advapi.GetSecurityDescriptorOwner.restype = wintypes.BOOL
+            advapi.GetSecurityDescriptorControl.argtypes = [ctypes.c_void_p,
+                ctypes.POINTER(wintypes.WORD), ctypes.POINTER(wintypes.DWORD)]
+            advapi.GetSecurityDescriptorControl.restype = wintypes.BOOL
+            advapi.GetSecurityDescriptorDacl.argtypes = [ctypes.c_void_p,
+                ctypes.POINTER(wintypes.BOOL), ctypes.POINTER(ctypes.c_void_p),
+                ctypes.POINTER(wintypes.BOOL)]
+            advapi.GetSecurityDescriptorDacl.restype = wintypes.BOOL
+            advapi.EqualSid.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+            advapi.EqualSid.restype = wintypes.BOOL
+            if (not advapi.GetSecurityDescriptorOwner(existing, ctypes.byref(owner), ctypes.byref(defaulted)) or
+                    not advapi.GetSecurityDescriptorControl(existing, ctypes.byref(control), ctypes.byref(revision)) or
+                    not advapi.GetSecurityDescriptorDacl(existing, ctypes.byref(present), ctypes.byref(existing_dacl), ctypes.byref(defaulted))):
                 raise ctypes.WinError(ctypes.get_last_error())
-            try:
-                actual = rendered.value.replace('D:PAI(', 'D:P(')
-                if actual != sddl:
-                    raise ValueError('Existing Windows updater cache is not owned exclusively by this user')
-            finally:
-                kernel.LocalFree.argtypes = [ctypes.c_void_p]
-                kernel.LocalFree.restype = ctypes.c_void_p
-                kernel.LocalFree(ctypes.cast(rendered, ctypes.c_void_p))
+            class AclSize(ctypes.Structure):
+                _fields_ = [('count', wintypes.DWORD), ('used', wintypes.DWORD), ('free', wintypes.DWORD)]
+            class AllowedAce(ctypes.Structure):
+                _fields_ = [('kind', wintypes.BYTE), ('flags', wintypes.BYTE),
+                            ('size', wintypes.WORD), ('mask', wintypes.DWORD),
+                            ('sid_start', wintypes.DWORD)]
+            acl_size, ace = AclSize(), ctypes.c_void_p()
+            advapi.GetAclInformation.argtypes = [ctypes.c_void_p, ctypes.c_void_p, wintypes.DWORD, ctypes.c_int]
+            advapi.GetAclInformation.restype = wintypes.BOOL
+            advapi.GetAce.argtypes = [ctypes.c_void_p, wintypes.DWORD, ctypes.POINTER(ctypes.c_void_p)]
+            advapi.GetAce.restype = wintypes.BOOL
+            advapi.GetLengthSid.argtypes = [ctypes.c_void_p]
+            advapi.GetLengthSid.restype = wintypes.DWORD
+            private = bool(owner and advapi.EqualSid(owner, sid) and control.value & 0x1000 and
+                           present.value and existing_dacl)
+            if private:
+                if not advapi.GetAclInformation(existing_dacl, ctypes.byref(acl_size), ctypes.sizeof(acl_size), 2):
+                    raise ctypes.WinError(ctypes.get_last_error())
+                private = acl_size.count == 1
+            if private:
+                if not advapi.GetAce(existing_dacl, 0, ctypes.byref(ace)):
+                    raise ctypes.WinError(ctypes.get_last_error())
+                allowed = ctypes.cast(ace, ctypes.POINTER(AllowedAce)).contents
+                # ACCESS_ALLOWED_ACE_TYPE, object/container inheritance and
+                # FILE_ALL_ACCESS; no other trustees or inherited grants.
+                private = bool(allowed.kind == 0 and allowed.flags == 3 and
+                               allowed.mask == 0x001f01ff and
+                               allowed.size == AllowedAce.sid_start.offset + advapi.GetLengthSid(sid) and
+                               advapi.EqualSid(ace.value + AllowedAce.sid_start.offset, sid))
+            if not private:
+                raise ValueError('Existing Windows updater cache is not owned exclusively by this user')
         advapi.ConvertStringSecurityDescriptorToSecurityDescriptorW.argtypes = [
             wintypes.LPCWSTR, wintypes.DWORD, ctypes.POINTER(ctypes.c_void_p), ctypes.c_void_p]
         advapi.ConvertStringSecurityDescriptorToSecurityDescriptorW.restype = wintypes.BOOL
