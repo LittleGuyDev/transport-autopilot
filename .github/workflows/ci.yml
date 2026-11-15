@@ -22,15 +22,17 @@ jobs:
     env:
       PYTHONUTF8: '1'
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
       - name: Check ephemeral signing test dependency
         run: openssl version
+      - name: Build manual source package
+        run: python scripts/build_unsigned.py
       - name: Test installer with synthetic files
         run: python -m unittest discover -s transport-autobuild/installer -p 'test_*.py'
       - name: Test updater with ephemeral keys
