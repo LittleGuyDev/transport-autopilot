@@ -2,6 +2,8 @@
 
 Free, open source transport construction automation for **Geoplanetical** by Little Guy Dev.
 
+[![Support Transport Autopilot on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/U7U0R66N6)
+
 Transport Autopilot expands roads, freeways, rail, and useful pipeline and port upgrades you control, within a monthly construction budget and cash reserve. It uses the game's normal costs, materials, construction times, and ownership rules.
 
 - **Build when needed** covers current demand and your chosen spare capacity.
