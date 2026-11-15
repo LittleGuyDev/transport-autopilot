@@ -189,13 +189,25 @@ class SetupLauncherTests(unittest.TestCase):
 
     def legacy_runtime(self):
         """Create and sign the previously shipped two-product runtime."""
-        path = self.package / 'auto_update.py'
-        path.write_bytes(path.read_bytes().replace(
-            b",\n            'vaccination-autopilot': 'vaccination-payload.json'", b''))
-        path = self.package / 'update_setup.py'
-        path.write_bytes(path.read_bytes().replace(
-            b"len(value['products']) > len(engine.PRODUCTS)", b"len(value['products']) > 2"))
+        # Git may check Python sources out with CRLF on Windows. Normalize
+        # source text before removing the third product, and require the fixture
+        # transformation to happen rather than silently testing a current runtime.
+        for filename, before, after in [
+                ('auto_update.py', ",\n            'vaccination-autopilot': 'vaccination-payload.json'", ''),
+                ('update_setup.py', "len(value['products']) > len(engine.PRODUCTS)", "len(value['products']) > 2")]:
+            path = self.package / filename
+            source = path.read_text(encoding='utf-8')
+            self.assertEqual(source.count(before), 1, 'Legacy fixture anchor: ' + filename)
+            path.write_bytes(source.replace(before, after).encode('utf-8'))
         self.resign(self.package)
+
+    def test_legacy_runtime_fixture_handles_crlf_sources(self):
+        for filename in ('auto_update.py', 'update_setup.py'):
+            path = self.package / filename
+            path.write_bytes(path.read_text(encoding='utf-8').replace('\n', '\r\n').encode('utf-8'))
+        self.legacy_runtime()
+        self.assertEqual(setup._runtime_products(self.package), {'transport-autopilot', 'tourism-dashboard'})
+        self.assertIn(b"len(value['products']) > 2", (self.package / 'update_setup.py').read_bytes())
 
     def resign(self, package):
         manifest_path = package / 'release-manifest.json'
