@@ -80,6 +80,7 @@ class EngineTests(unittest.TestCase):
         self.exe = self.archive.parent.parent / 'Geoplanetical.exe'
         for name in ('install.py', 'core.py', 'platform_support.py', 'registration.py'):
             shutil.copyfile(ROOT / 'transport-autobuild/installer' / name, self.package / name)
+        self.legacy_fixture_installer(self.package)
         with (self.package / 'platform_support.py').open('a') as stream:
             stream.write('\n# Signed synthetic test fixture: never discover live Steam or processes.\n'
                          'def steam_libraries(): return []\n'
@@ -111,6 +112,16 @@ class EngineTests(unittest.TestCase):
         else:
             shutil.copyfile(ROOT / 'updater' / sources[name], package / name)
 
+    def legacy_fixture_installer(self, package):
+        # Keep coverage of pre-policy releases while production's officially
+        # tested version advances. This signed fixture changes only its list.
+        path = package / 'install.py'
+        source = path.read_text()
+        source = source.replace("payload.get('gameVersions') != ['1.1.4']",
+                                "payload.get('gameVersions') != ['1.1.3']")
+        path.write_text(source)
+
+
     def sign(self, *, sequence=1, product='transport-autopilot', mutate=None, package=None, version='1.1.0',
              game_versions=None):
         package = package or self.package
@@ -118,6 +129,9 @@ class EngineTests(unittest.TestCase):
             game_versions = json.loads((package / engine.PRODUCTS[product]).read_bytes())['gameVersions']
         manifest = {'schema': 1, 'product': product, 'sequence': sequence, 'version': version,
                     'minimum_updater': 1, 'game_versions': game_versions, 'files': {}}
+        policy = json.loads((package / engine.PRODUCTS[product]).read_bytes()).get('compatibilityPolicy')
+        if policy is not None:
+            manifest['compatibility_policy'] = policy
         for path in package.iterdir():
             if path.name not in (engine.MANIFEST, engine.SIGNATURE, engine.CHECKSUMS):
                 data = path.read_bytes()
@@ -143,6 +157,7 @@ class EngineTests(unittest.TestCase):
             for before, after in replacements:
                 source = source.replace(before, after)
             (package / filename).write_text(source)
+        self.legacy_fixture_installer(package)
         with (package / 'platform_support.py').open('a') as stream:
             stream.write('\n# Synthetic fixture: never inspect live Steam or processes.\n'
                          'def steam_libraries(): return []\n'
@@ -379,6 +394,48 @@ class EngineTests(unittest.TestCase):
                                self.archive, self.profile, public_key=self.signer.public_key,
                                python=Path(sys.executable).resolve())
         self.assertEqual(before, self.archive.read_bytes())
+
+    def test_exact_hooks_policy_accepts_future_game_and_checks_real_hooks(self):
+        self.payload['compatibilityPolicy'] = {'mode': 'exact-hooks', 'minimumGameVersion': '1.1.4'}
+        self.payload['gameVersions'] = ['1.1.4']
+        (self.package / 'transport-payload.json').write_text(json.dumps(self.payload))
+        path = self.package / 'install.py'
+        path.write_text(path.read_text().replace("payload.get('gameVersions') != ['1.1.3']",
+                                               "payload.get('gameVersions') != ['1.1.4']"))
+        self.make_game(version='1.2.0')
+        self.sign(sequence=2)
+        result = engine.run_updates(self.state, [{'product':'transport-autopilot','package_root':self.package}],
+            self.archive, self.profile, public_key=self.signer.public_key, python=Path(sys.executable).resolve())
+        self.assertTrue(result.changed)
+        self.assertTrue(result.executable)
+        self.make_game(app=b'UNRECOGNIZED_GAME_CODE', version='1.2.1')
+        before = self.archive.read_bytes()
+        with self.assertRaises((engine.UpdateError, self.installer.InstallError)):
+            engine.run_updates(self.state, [{'product':'transport-autopilot','package_root':self.package}],
+                self.archive, self.profile, public_key=self.signer.public_key, python=Path(sys.executable).resolve())
+        self.assertEqual(before, self.archive.read_bytes())
+
+
+    def test_exact_hooks_policy_is_signed_bounded_and_preserves_legacy_behavior(self):
+        policy = {'mode':'exact-hooks','minimumGameVersion':'1.1.4'}
+        payload = {'gameVersions':['1.1.4'],'compatibilityPolicy':policy}
+        for version in ('1.1.4', '1.1.5', '1.2.0', '2.0.0'):
+            self.assertTrue(engine._allows_game_version(version, payload))
+        for version in ('1.1.3', '1.2.0-beta', 'garbage', '01.2.0', '1.1.4;evil', None):
+            self.assertFalse(engine._allows_game_version(version, payload))
+        self.assertFalse(engine._allows_game_version('1.1.5', {'gameVersions':['1.1.4']}))
+        self.payload['compatibilityPolicy'] = policy
+        (self.package / 'transport-payload.json').write_text(json.dumps(self.payload))
+        self.sign(mutate=lambda m: m.pop('compatibility_policy'))
+        with self.assertRaisesRegex(engine.UpdateError, 'authenticated installer payload differ'):
+            engine.verify_package(self.package, self.signer.public_key, 'transport-autopilot')
+        for bad in ({'mode':'anything','minimumGameVersion':'1.1.4'}, {'mode':'exact-hooks','minimumGameVersion':'*'}):
+            self.payload['compatibilityPolicy'] = bad
+            (self.package / 'transport-payload.json').write_text(json.dumps(self.payload))
+            self.sign()
+            with self.assertRaises(engine.UpdateError):
+                engine.verify_package(self.package, self.signer.public_key, 'transport-autopilot')
+
 
     def test_manifest_payload_game_version_mismatch_stops_before_installer_import(self):
         self.sign(game_versions=['1.1.4'])

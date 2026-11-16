@@ -11,7 +11,7 @@ import unittest
 import core
 
 PRODUCT = Path(__file__).resolve().parents[1]
-TARGET = '1.1.0'
+TARGET = '1.1.1'
 PRIOR = '1.1.1'
 PAYLOAD = 'transport-payload.json'
 PRIOR_FINGERPRINT = 'b565291cebe98dc2e0d2db0f78ec09e55ae2f049a00307c369a60ff939bb1cd0'
@@ -38,7 +38,7 @@ class ReleaseVersionTests(unittest.TestCase):
     def test_built_versions_and_runtime_agree(self):
         self.assertEqual(json.loads((self.dist / 'mod.json').read_text())['version'], TARGET)
         self.assertEqual(self.payload['version'], TARGET)
-        for filename, literal in [('manager-ui.js', "VERSION = '1.1.0'"), ('ui.js', "version: '1.1.0'")]:
+        for filename, literal in [('manager-ui.js', "VERSION = '1.1.1'"), ('ui.js', "version: '1.1.1'")]:
             self.assertIn(literal, (PRODUCT / filename).read_text())
         if (self.dist / 'geotransport.json').exists():
             data = json.loads((self.dist / 'geotransport.json').read_text())
@@ -52,7 +52,7 @@ class ReleaseVersionTests(unittest.TestCase):
         self.assertEqual(match['fingerprint'], PRIOR_FINGERPRINT)
 
     def test_reused_number_keeps_distinct_original_payload(self):
-        old = next(p for p in self.legacy if p.get('version') == TARGET or TARGET in p.get('labels', []))
+        old = next(p for p in self.legacy if p.get('version') == '1.1.0' or '1.1.0' in p.get('labels', []))
         fingerprint = lambda p: hashlib.sha256(json.dumps({key: p[key] for key in ('app', 'sim')}, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
         self.assertEqual(fingerprint(old), '27c72f7618fee597cffebe36791d054495799cd84f13ffb318bb87ebd086b028')
         self.assertNotEqual(fingerprint(old), PRIOR_FINGERPRINT)
@@ -60,7 +60,7 @@ class ReleaseVersionTests(unittest.TestCase):
         self.assertNotEqual(PRIOR_FINGERPRINT, fingerprint(self.payload))
 
     def test_real_previous_shapes_upgrade_and_remove_with_other_wrappers(self):
-        previous = [next(p for p in self.legacy if p.get('version') == TARGET or TARGET in p.get('labels', [])),
+        previous = [next(p for p in self.legacy if p.get('version') == '1.1.0' or '1.1.0' in p.get('labels', [])),
                     next(p for p in self.legacy if PRIOR + ' private pre-release' in p.get('labels', []))]
         for old in previous:
             with self.subTest(old=old.get('labels', old.get('version'))):

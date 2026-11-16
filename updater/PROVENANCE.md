@@ -14,9 +14,9 @@ signing and test dependency, not a player dependency. The publisher's private
 key stays outside the repository and all release packages. First installation
 is the trust boundary; future downloads cannot replace the pinned public key.
 
-The updater checks only explicitly enrolled copies of our two products. It
+The updater checks only explicitly enrolled copies of our enrolled products. It
 authenticates complete release contents, copies a verified private snapshot,
-uses isolated Python startup, and checks both products before changing either.
+uses isolated Python startup, and checks all enrolled products before changing them.
 It rejects a lower accepted release sequence or conflicting bytes at the same
 sequence. This is rollback protection against the user's accepted history, not
 an online guarantee that Steam has delivered the newest available release.
@@ -51,3 +51,5 @@ The installed coordinator uses protocol 1 and preserves its initial trust
 runtime. A future incompatible updater protocol requires deliberate re-setup.
 No background service, administrator task or independent network downloader is
 installed. Steam supplies downloads; the updater acts before game startup.
+
+The 1.1.1 source adds signed exact-hook compatibility policy and capability-based immutable runtime enrollment. It preserves the public source Windows native-descriptor validation and explicit UTF-8 isolated-child diagnostics; those platform fixes are not replaced by older canonical code.

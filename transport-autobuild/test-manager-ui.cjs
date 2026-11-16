@@ -6,7 +6,7 @@ const vm = require('node:vm');
 const { execFileSync } = require('node:child_process');
 execFileSync('python3', [path.join(__dirname, 'build.py')]);
 const payload = JSON.parse(fs.readFileSync(path.join(__dirname, 'dist/geotransport.json'), 'utf8'));
-assert.equal(payload.version, '1.1.0');
+assert.equal(payload.version, '1.1.1');
 assert.deepEqual(payload.nativePack.manifest, JSON.parse(fs.readFileSync(path.join(__dirname, 'native-pack/mod.json'), 'utf8')));
 assert.equal(payload.nativePack.thumbnailBase64, fs.readFileSync(path.join(__dirname, 'native-pack/thumbnail.png')).toString('base64'));
 // Real game bundles stay local. Set these paths to check the generated patch anchors.
@@ -51,7 +51,7 @@ for (const [name, snapshot, expected] of [
   ['duplicate canonical identity', { ...nativeSnapshot(), mods: [{ id: ID, status: 'active' }, { id: ID, status: 'disabled' }] }, false]
 ]) {
   const env = setup(snapshot); assert.equal(env.policy.enabled, expected, name);
-  assert.equal(env.policy.version, '1.1.0'); assert.equal(Object.isFrozen(env.policy), true); assert.equal(env.policy, env.window.__geoTransportLaunch);
+  assert.equal(env.policy.version, '1.1.1'); assert.equal(Object.isFrozen(env.policy), true); assert.equal(env.policy, env.window.__geoTransportLaunch);
   assert.equal(env.reads, 1, name + ': snapshot is captured once'); assert.equal(env.manager.wrap, undefined, 'no fake native preference facade');
 }
 const env = setup(nativeSnapshot());
@@ -94,7 +94,7 @@ assert.equal(env.reads, 1); assert.equal(overlay.children.length, 1, 'no campaig
     const { validateModManifest } = require(path.join(nativeRoot, 'mod-manifest'));
     const { planModLoad, prepareModRegistry } = require(path.join(nativeRoot, 'mod-registry'));
     const { prepareModContent } = require(path.join(nativeRoot, 'mod-scanner'));
-    const checked = validateModManifest({ id: ID, version: '1.1.0', name: 'Transport Autopilot', description: 'Automatic transport construction.', contentApi: 1, tier: 'presentation', provides: {} });
+    const checked = validateModManifest({ id: ID, version: '1.1.1', name: 'Transport Autopilot', description: 'Automatic transport construction.', contentApi: 1, tier: 'presentation', provides: {} });
     assert.equal(checked.ok, true);
     const candidate = { ...checked, source: { kind: 'workshop', itemId: '3839206386' } };
     const prepared = await prepareModRegistry(planModLoad([candidate], { version: 1, order: [ID], disabled: [] }), row => prepareModContent('/unused-empty-pack', row.manifest, () => { throw new Error('Empty native pack never decodes assets.'); }));

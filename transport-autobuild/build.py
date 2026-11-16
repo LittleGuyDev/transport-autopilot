@@ -18,34 +18,15 @@ def build():
     activation = (HERE / 'worker-activation.js').read_text()
     manifest = json.loads((HERE / 'native-pack/mod.json').read_text())
     thumbnail = (HERE / 'native-pack/thumbnail.png').read_bytes()
-    handlers = []
-    descriptors = []
-    for name, method, mutation in [('transport_auto_state', 'state', 'none'),
-                                    ('transport_auto_config', 'configure', 'gameplay'),
-                                    ('transport_auto_run', 'run', 'gameplay')]:
-        args = 't[0]' if method == 'configure' else ''
-        call = 'e' + (',' + args if args else '')
-        handlers.append(name + '(e,t,a){let r=globalThis.__geoTransportRuntime.' + method + '(' + call + ');return Fe(a,r.ok!==false,r.ok!==false?"transport.auto.ok":(r.reason||"transport.auto.failed"),r.state||{message:r.message||r.reason||"Automation unavailable"})},')
-        params = '[{name:"json",type:"string",required:!0}]' if method == 'configure' else '[]'
-        usage = '<json>' if method == 'configure' else ''
-        descriptors.append('Sg(' + ','.join(json.dumps(x) for x in [name, 'general', 'transport.auto.' + method, usage]) + ',' + params + ',{mutation:' + json.dumps(mutation) + '}),')
-    manager_detail = 'R("item").disabled=l||!x}'
-    boot_start = 'let u=await s.boot({playerKey:n,savePayload:t||null,'
-    app_patches = [
-        [manager_detail, 'R("item").disabled=l||!x;try{globalThis.__geoTransportManager?.render(e,ee,a)}catch(ge){console.warn("[transport-autobuild] manager entry",ge)}}'],
-        [boot_start, boot_start + 'transportAutopilotEnabled:globalThis.__geoTransportLaunch?.enabled===true,'],
-    ]
     spec = dict(modId='geotransport', name='Auto Transport Construction', version=manifest['version'], order=50,
-                gameVersion='1.1.3 (native Steam build 26651281; exact anchors checked)', blockSize=4194304,
+                gameVersion='1.1.4 (native Steam build 26709373; exact anchors checked)', blockSize=4194304,
                 nativePack=dict(manifest=manifest, thumbnailBase64=base64.b64encode(thumbnail).decode('ascii'),
                                 workshopItemId='3839206386', folder='transport-autopilot'),
-                app=dict(prefix='\n' + manager + '\n', patches=app_patches, suffix='\n' + ui + '\n'),
-                sim=dict(prefix='\n' + runtime + '\nglobalThis.__geoTransportRuntime = __geoTransportRuntime;\n' + activation + '\n', patches=[
-                    ['var CLo=Object.freeze({', native_adapter + '\nvar CLo=Object.freeze({' + ''.join(handlers)],
-                    ['Za("money","economy","console.help.money",', ''.join(descriptors) + 'Za("money","economy","console.help.money",'],
-                    ['function Pvt(e){let t=e._pendingViewDelta;', 'function Pvt(e){try{globalThis.__geoTransportRuntime.tick(e)}catch(x){console.warn("[auto-transport]",x)}let t=e._pendingViewDelta;'],
-                    ['this.sim=b,', 'this.sim=b,globalThis.__geoTransportRuntime.bindActivation(b,t.transportAutopilotEnabled===true),'],
-                ], suffix=''))
+                app=dict(prefix='\n' + manager + '\n', patches=[], suffix='\n' + ui + '\n'),
+                sim=dict(prefix='\n' + runtime + '\nglobalThis.__geoTransportRuntime = __geoTransportRuntime;\n' + activation + '\n', patches=[], suffix=''))
+    hooks = json.loads((HERE / 'native-hooks.json').read_text())
+    for side in ('app', 'sim'):
+        spec[side]['patches'] = [[a, b.replace('@@native-transport.js@@', native_adapter)] for a, b in hooks[side]]
     DIST.mkdir(exist_ok=True)
     (DIST / 'geotransport.json').write_text(json.dumps(spec, separators=(',', ':')) + '\n')
     for name in ['mod.json', 'thumbnail.png']:
@@ -53,7 +34,7 @@ def build():
     # This distribution uses only our independent, single-product installer.
     # The root installer belongs to the separate legacy Geo-mod toolkit.
     payload = dict(schema=1, id=manifest['id'], name='Transport Autopilot',
-                   version=manifest['version'], gameVersions=['1.1.3'],
+                   version=manifest['version'], gameVersions=['1.1.4'], compatibilityPolicy=dict(mode='exact-hooks', minimumGameVersion='1.1.4'),
                    app=spec['app'], sim=spec['sim'])
     (DIST / 'transport-payload.json').write_text(json.dumps(payload, separators=(',', ':')) + '\n')
     for name in ['install.py', 'core.py', 'platform_support.py', 'registration.py',

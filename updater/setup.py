@@ -284,6 +284,20 @@ def _runtime_products(runtime):
     raise ValueError('Installed updater capability table is invalid')
 
 
+def _runtime_capabilities(runtime):
+    """Read opt-in compatibility features from an already trusted runtime."""
+    source = _safe(runtime / 'auto_update.py')
+    if source.stat().st_size > 64 * 1024 * 1024:
+        raise ValueError('Installed updater runtime is unexpectedly large')
+    for node in ast.parse(source.read_bytes()).body:
+        if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == 'RUNTIME_CAPABILITIES' for t in node.targets):
+            value = ast.literal_eval(node.value)
+            if isinstance(value, (tuple, list)) and all(isinstance(v, str) for v in value):
+                return set(value)
+            raise ValueError('Installed updater feature table is invalid')
+    return set()
+
+
 def _install_runtime(engine, snapshot, state, runtime, key):
     """Publish a complete verified generation; never overwrite the pinned one."""
     if runtime.exists():
@@ -317,6 +331,10 @@ def _install_runtime(engine, snapshot, state, runtime, key):
 
 def _config(engine, path):
     value = engine._json(engine._read(path, 1024 * 1024))
+    return _validate_config(engine, value)
+
+
+def _validate_config(engine, value):
     if (not isinstance(value, dict) or set(value) != {'schema', 'game', 'profile', 'python', 'products', 'runtime'}
             or type(value.get('schema')) is not int or value['schema'] != 1
             or not isinstance(value.get('products'), list) or len(value['products']) > len(engine.PRODUCTS)):
@@ -335,6 +353,36 @@ def _config(engine, path):
     for item in products:
         _absolute(item['package_root'])
     return value
+
+
+ENROLLMENT_PENDING = 'enrollment-pending.json'
+
+
+def _launcher_config(engine, path, runtime):
+    """Allow only the exact signed generation prepared before a Steam switch.
+
+    A crash between Steam's atomic field update and our config update leaves
+    the old config intact. The new launcher can use its bounded private journal;
+    the old immutable launcher continues using the old config normally.
+    """
+    current = _config(engine, path)
+    if current['runtime'] == str(runtime):
+        return current
+    pending_path = _safe(path.parent / ENROLLMENT_PENDING)
+    if not pending_path.exists():
+        return current
+    pending = engine._json(engine._read(pending_path, 2 * 1024 * 1024))
+    if (not isinstance(pending, dict) or set(pending) != {'schema', 'previous', 'next'} or
+            type(pending.get('schema')) is not int or pending['schema'] != 1 or
+            pending['previous'] != current):
+        raise ValueError('Invalid pending updater enrollment')
+    wanted = _validate_config(engine, pending['next'])
+    if (wanted['runtime'] != str(runtime) or
+            _runtime_path(path.parent, wanted['runtime']) != runtime or
+            any(wanted[key] != current[key] for key in ('game', 'profile')) or
+            _load_key(runtime) != _load_key(_runtime_path(path.parent, current['runtime']))):
+        raise ValueError('Pending enrollment does not belong to this trusted runtime')
+    return wanted
 
 
 @dataclass(frozen=True)
@@ -446,7 +494,9 @@ def register(package, archive, profile, public_key=None, state_dir=None, trusted
                                       or sequence < prior['sequence']
                                       or sequence == prior['sequence'] and digest != prior.get('digest')):
                 raise ValueError('Signed release rollback or conflicting sequence rejected')
-            if runtime.exists() and product not in _runtime_products(runtime):
+            needed_capabilities = {'exact-hooks-v1'} if snapshot.manifest.get('compatibility_policy') else set()
+            if runtime.exists() and (product not in _runtime_products(runtime)
+                                     or not needed_capabilities <= _runtime_capabilities(runtime)):
                 # A newly enrolled product needs a launcher that knows its identity.
                 # Only a complete package signed by the already pinned key can
                 # supply it. Retain the old generation for repair; config and the
@@ -463,6 +513,8 @@ def register(package, archive, profile, public_key=None, state_dir=None, trusted
             required = {row['product'] for row in previous['products']} if previous else set()
             if not required.union({product}) <= _runtime_products(runtime):
                 raise ValueError('Signed runtime does not support every enrolled product')
+            if not needed_capabilities <= _runtime_capabilities(runtime):
+                raise ValueError('Signed runtime does not support the release compatibility policy')
             products = list(previous['products']) if previous else []
             products = [item for item in products if item['product'] != product]
             products.append({'product': product, 'package_root': str(package)})
@@ -470,8 +522,15 @@ def register(package, archive, profile, public_key=None, state_dir=None, trusted
             value = {'schema': 1, 'game': str(archive), 'profile': str(profile), 'python': str(python),
                      'products': sorted(products, key=lambda item: item['product']), 'runtime': str(runtime)}
             releases[product] = {'sequence': sequence, 'digest': digest}
-            engine._atomic_json(release_path, releases)
-            engine._atomic_json(config_path, value)
+            pending_path = _safe(state / ENROLLMENT_PENDING)
+            migrating = previous is not None and previous['runtime'] != str(runtime) and steam_helper is not None
+            if migrating:
+                # Publish recovery before touching Steam. Never strand its old
+                # launch line with a config pointing at an incompatible runtime.
+                engine._atomic_json(pending_path, {'schema': 1, 'previous': previous, 'next': value})
+            else:
+                engine._atomic_json(release_path, releases)
+                engine._atomic_json(config_path, value)
         instructions = _instructions(state, python, runtime / 'update_launcher.py', config_path)
         if steam_helper is not None:
             owned_lines = () if previous is None else (_launch_options(
@@ -479,6 +538,10 @@ def register(package, archive, profile, public_key=None, state_dir=None, trusted
             steam_result = steam_helper.configure(archive, state, instructions.launch_options,
                                                   owned_lines=owned_lines, consent=steam_consent,
                                                   private=_private)
+            if migrating:
+                engine._atomic_json(release_path, releases)
+                engine._atomic_json(config_path, value)
+                pending_path.unlink(missing_ok=True)
             instructions = _instructions(state, python, runtime / 'update_launcher.py', config_path,
                                          steam_configured=True, options_override=steam_result.launch_options)
         return instructions

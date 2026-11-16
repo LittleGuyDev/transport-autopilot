@@ -3,7 +3,7 @@
   'use strict';
   var host = globalThis, browser = typeof window === 'undefined' ? host : window;
   if (host.__geoTransportLaunch) return;
-  var ID = 'littleguydev-transport-autopilot', VERSION = '1.1.0';
+  var ID = 'littleguydev-transport-autopilot', VERSION = '1.1.1';
   var snapshot = null;
   try { snapshot = browser.desktop && browser.desktop.mods && browser.desktop.mods.snapshot; } catch (_) {}
   var matches = snapshot && Array.isArray(snapshot.mods) ? snapshot.mods.filter(function (row) { return row && row.id === ID; }) : [];

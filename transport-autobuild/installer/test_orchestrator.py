@@ -30,7 +30,7 @@ def section(kind, version):
             'patches': [[kind + '_ANCHOR', kind + '_OWN_' + version + '(' + kind + '_ANCHOR)']]}
 
 
-def archive_bytes(app, sim, unpacked=True, version='1.1.3'):
+def archive_bytes(app, sim, unpacked=True, version='1.1.4'):
     packed = bytearray()
     header = {'files': {}}
     values = {'package.json': json.dumps({'name': 'geoplanetical', 'version': version,
@@ -67,7 +67,7 @@ class OrchestratorTests(unittest.TestCase):
                     'requires': [], 'provides': {}, 'description': 'Owned transport automation', 'authors': ['Little Guy Dev']}
         (self.package / 'mod.json').write_text(json.dumps(manifest))
         (self.package / 'thumbnail.png').write_bytes(png())
-        self.payload = {'schema': 1, 'id': registration.MOD_ID, 'version': '1.0.0', 'gameVersions': ['1.1.3'],
+        self.payload = {'schema': 1, 'id': registration.MOD_ID, 'version': '1.0.0', 'gameVersions': ['1.1.4'],
                         'app': section('APP', 'current'), 'sim': section('SIM', 'current')}
         self.old = {'labels': ['0.9.0'], 'app': section('APP', 'old'), 'sim': section('SIM', 'old')}
         (self.package / 'transport-payload.json').write_text(json.dumps(self.payload))
@@ -87,7 +87,7 @@ class OrchestratorTests(unittest.TestCase):
     def tearDown(self):
         self.stack.close(); self.temp.cleanup()
 
-    def make_game(self, mac=False, unpacked=True, version='1.1.3', app=None, sim=None):
+    def make_game(self, mac=False, unpacked=True, version='1.1.4', app=None, sim=None):
         game = self.root / 'game'
         if mac:
             self.app = game / 'Geoplanetical.app'
@@ -155,7 +155,7 @@ class OrchestratorTests(unittest.TestCase):
         self.assertEqual(phases, [True, True, True])
         self.assertFalse(planned[1]['changes'])
         self.assertFalse(planned[1]['metadata'])
-        self.assertIn('Game: Geoplanetical 1.1.3', output.getvalue())
+        self.assertIn('Game: Geoplanetical 1.1.4', output.getvalue())
         self.assertIn('is already installed', output.getvalue())
         self.assert_scripts(self.base_app, self.base_sim)
 
@@ -185,7 +185,7 @@ class OrchestratorTests(unittest.TestCase):
             self.archive.write_bytes(archive_bytes(self.base_app, self.base_sim, version='9.9.9'))
             return ''
         with mock.patch.object(installer, 'plan', side_effect=lambda archive, action, **kw: real_plan(archive, action, self.package, **kw)) as planning, mock.patch.object(installer, 'PACKAGE', self.package), mock.patch.object(installer.sys.stdin, 'isatty', return_value=True), mock.patch('builtins.input', side_effect=answer), contextlib.redirect_stdout(io.StringIO()):
-            with self.assertRaisesRegex(core.InstallError, 'supports Geoplanetical'):
+            with self.assertRaisesRegex(core.InstallError, 'requires Geoplanetical'):
                 installer.main(['--game', str(self.archive), '--profile', str(self.profile)])
         self.assertEqual(planning.call_count, 2)
         self.assertEqual(self.archive.read_bytes(), archive_bytes(self.base_app, self.base_sim, version='9.9.9'))

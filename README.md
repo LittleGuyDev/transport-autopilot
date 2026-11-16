@@ -17,9 +17,9 @@ Transport Autopilot expands roads, freeways, rail, and useful pipeline and port 
 
 Subscribe, wait for the download, then run the included installer once with the game closed. Subscribing alone does not install the automation code. Python **3.8 or newer** is required. Read the [complete installation, update, and removal guide](transport-autobuild/README.txt).
 
-Current release: **1.1.0**, for **Geoplanetical 1.1.3 / Steam build 26651281**, on Windows and native Mac. See [compatibility and validation](transport-autobuild/VALIDATION.md) for tested behavior and limits. New game versions need a compatibility review.
+Prepared update: **1.1.1**, with native Mac support tested on **Geoplanetical 1.1.4 / Steam build 26709373**. Windows installers are included; native Windows 1.1.4 gameplay is not yet verified. The Workshop upload is pending; this source update does not change subscribers' downloads. See [compatibility and validation](transport-autobuild/VALIDATION.md) for the Mac acceptance and Windows validation limits.
 
-The `main` branch includes an unreleased Windows updater fix. The existing signed 1.1.0 package predates that fix; publishing this source repository has not changed the Workshop download.
+Newer stable game versions can be tried when the same exact code hooks and integrity checks still pass. A new version number alone no longer blocks launch, but changed game code may still require a mod update. The tested version above records confirmed support; it is not a promise that every future version will work. After this Workshop update downloads, existing users should run its included installer once to activate the new signed updater capability.
 
 Find the panel in **Transport Room → Build → Transport Autopilot**, **Settings → Game**, or the game's search. Saving settings and starting construction are separate actions. Disabling automation does not cancel existing projects.
 

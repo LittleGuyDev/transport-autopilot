@@ -1,0 +1,30 @@
+{
+  "app": [
+    [
+      "A(\"item\").disabled=l||!x}",
+      "A(\"item\").disabled=l||!x;try{globalThis.__geoTransportManager?.render(e,ae,a)}catch(ge){console.warn(\"[transport-autobuild] manager entry\",ge)}}"
+    ],
+    [
+      "let u=await s.boot({playerKey:n,savePayload:t||null,",
+      "let u=await s.boot({playerKey:n,savePayload:t||null,transportAutopilotEnabled:globalThis.__geoTransportLaunch?.enabled===true,"
+    ]
+  ],
+  "sim": [
+    [
+      "var _zo=Object.freeze({",
+      "@@native-transport.js@@\nvar _zo=Object.freeze({transport_auto_state(e,t,a){let r=globalThis.__geoTransportRuntime.state(e);return Ye(a,r.ok!==false,r.ok!==false?\"transport.auto.ok\":(r.reason||\"transport.auto.failed\"),r.state||{message:r.message||r.reason||\"Automation unavailable\"})},transport_auto_config(e,t,a){let r=globalThis.__geoTransportRuntime.configure(e,t[0]);return Ye(a,r.ok!==false,r.ok!==false?\"transport.auto.ok\":(r.reason||\"transport.auto.failed\"),r.state||{message:r.message||r.reason||\"Automation unavailable\"})},transport_auto_run(e,t,a){let r=globalThis.__geoTransportRuntime.run(e);return Ye(a,r.ok!==false,r.ok!==false?\"transport.auto.ok\":(r.reason||\"transport.auto.failed\"),r.state||{message:r.message||r.reason||\"Automation unavailable\"})},"
+    ],
+    [
+      "dr(\"money\",\"economy\",\"console.help.money\",",
+      "Oh(\"transport_auto_state\",\"general\",\"transport.auto.state\",\"\",[],{mutation:\"none\"}),Oh(\"transport_auto_config\",\"general\",\"transport.auto.configure\",\"<json>\",[{name:\"json\",type:\"string\",required:!0}],{mutation:\"gameplay\"}),Oh(\"transport_auto_run\",\"general\",\"transport.auto.run\",\"\",[],{mutation:\"gameplay\"}),dr(\"money\",\"economy\",\"console.help.money\","
+    ],
+    [
+      "function DPt(e){let t=e._pendingViewDelta;",
+      "function DPt(e){try{globalThis.__geoTransportRuntime.tick(e)}catch(x){console.warn(\"[auto-transport]\",x)}let t=e._pendingViewDelta;"
+    ],
+    [
+      "this.sim=b,",
+      "this.sim=b,globalThis.__geoTransportRuntime.bindActivation(b,t.transportAutopilotEnabled===true),"
+    ]
+  ]
+}

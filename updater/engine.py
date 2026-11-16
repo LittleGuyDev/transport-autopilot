@@ -28,6 +28,7 @@ SIGNATURE = 'release-manifest.sig'
 PRODUCTS = {'transport-autopilot': 'transport-payload.json',
             'tourism-dashboard': 'tourism-payload.json',
             'vaccination-autopilot': 'vaccination-payload.json'}
+RUNTIME_CAPABILITIES = ('exact-hooks-v1',)
 RUNTIME_FILES = {'auto_update.py', 'update_signature.py', 'update_trust.py',
                  'update_setup.py', 'update_launcher.py'}
 CHECKSUMS = 'SHA256SUMS.txt'
@@ -118,6 +119,26 @@ def _game_versions(value):
             all(_explicit_semver(version) for version in value) and len(set(value)) == len(value))
 
 
+def _compatibility_policy(value):
+    if value is None:
+        return True
+    return (isinstance(value, dict) and set(value) == {'mode', 'minimumGameVersion'}
+            and value['mode'] == 'exact-hooks'
+            and isinstance(value['minimumGameVersion'], str)
+            and re.fullmatch(r'(0|[1-9][0-9]{0,3})\.(0|[1-9][0-9]{0,3})\.(0|[1-9][0-9]{0,3})', value['minimumGameVersion']) is not None)
+
+
+def _allows_game_version(version, payload):
+    if version in payload['gameVersions']:
+        return True
+    policy = payload.get('compatibilityPolicy')
+    if not policy or not _compatibility_policy(policy) or not isinstance(version, str):
+        return False
+    if re.fullmatch(r'(0|[1-9][0-9]{0,3})\.(0|[1-9][0-9]{0,3})\.(0|[1-9][0-9]{0,3})', version) is None:
+        return False
+    return tuple(map(int, version.split('.'))) >= tuple(map(int, policy['minimumGameVersion'].split('.')))
+
+
 @functools.lru_cache(maxsize=1)
 def _trusted_verifier():
     # These siblings belong to the stable installed runtime, never a download.
@@ -142,6 +163,7 @@ def verify_package(root, public_key, product, *, allow_legacy_cache=True):
             type(manifest.get('sequence')) is not int or manifest['sequence'] < 1 or
             type(manifest.get('minimum_updater')) is not int or manifest.get('minimum_updater') != 1 or
             not _game_versions(manifest.get('game_versions')) or
+            not _compatibility_policy(manifest.get('compatibility_policy')) or
             not isinstance(manifest.get('version'), str) or
             not re.fullmatch(r'\d+\.\d+\.\d+', manifest['version'])):
         raise UpdateError('Unsupported or wrong-product signed release manifest')
@@ -202,7 +224,8 @@ def verify_package(root, public_key, product, *, allow_legacy_cache=True):
             payload_bytes = data
     payload = _json(payload_bytes)
     if (not isinstance(payload, dict) or
-            payload.get('gameVersions') != manifest['game_versions']):
+            payload.get('gameVersions') != manifest['game_versions'] or
+            payload.get('compatibilityPolicy') != manifest.get('compatibility_policy')):
         raise UpdateError('Signed game versions and authenticated installer payload differ')
     if CHECKSUMS in actual_names:
         checksums = {}
@@ -339,7 +362,7 @@ def fast_check(installer, archive, profile):
             observed.add(Path(str(archive) + '.unpacked') / name)
     identities = _identities(observed)
     game = _json(parsed.read('package.json'))
-    if (game.get('name') != 'geoplanetical' or game.get('version') not in payload['gameVersions']
+    if (game.get('name') != 'geoplanetical' or not _allows_game_version(game.get('version'), payload)
             or str(game.get('steam', {}).get('appId')) != '940230'):
         raise UpdateError('This release supports Geoplanetical versions: ' + ', '.join(payload['gameVersions']))
     # Validate paths before the archive reader can resolve away link evidence.

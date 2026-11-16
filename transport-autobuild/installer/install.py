@@ -43,7 +43,7 @@ def _source_sibling(name):
 try:
     for _sibling_name in ('core', 'platform_support', 'registration'):
         _source_sibling(_sibling_name)
-    from core import (ArchiveEdit, AsarArchive, FileContent, InstallError, Transaction,
+    from core import (allows_game_version, validate_compatibility_policy, ArchiveEdit, AsarArchive, FileContent, InstallError, Transaction,
                       apply_section, atomic_write, file_sha, reverse_own_payload,
                       sha256, transition_section)
     import platform_support as platform
@@ -164,8 +164,9 @@ def package_files(directory):
     payload = read_json(directory / 'transport-payload.json')
     if (payload.get('schema') != 1 or payload.get('id') != registration.MOD_ID or
             payload.get('version') != manifest['version'] or
-            payload.get('gameVersions') != ['1.1.3']):
+            payload.get('gameVersions') != ['1.1.4']):
         raise InstallError('The installer files do not belong to the same release. Download the whole package again.')
+    validate_compatibility_policy(payload)
     for key in ('app', 'sim'):
         section = payload.get(key)
         if not isinstance(section, dict) or not isinstance(section.get('patches'), list):
@@ -305,9 +306,9 @@ def plan(archive, action, directory=PACKAGE, profile=None):
     manifest, payload, migrations = package_files(directory)
     parsed = AsarArchive.from_file(archive)
     game = json.loads(parsed.read('package.json').decode('utf-8'))
-    if (game.get('name') != 'geoplanetical' or game.get('version') not in payload['gameVersions'] or
+    if (game.get('name') != 'geoplanetical' or not allows_game_version(game, payload) or
             str(game.get('steam', {}).get('appId')) != '940230'):
-        raise InstallError('This release supports Geoplanetical 1.1.3. The selected game is different; no files were changed.')
+        raise InstallError('This release requires Geoplanetical 1.1.4 or a newer stable version with matching hooks. No files were changed.')
     header_hash = sha256(parsed.header_bytes)
     app = parsed.read(APP_SCRIPT, Path(str(archive) + '.unpacked'))
     sim = parsed.read(SIM_SCRIPT, Path(str(archive) + '.unpacked'))

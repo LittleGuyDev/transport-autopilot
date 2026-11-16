@@ -46,14 +46,17 @@ class SetupLauncherTests(unittest.TestCase):
         self.state = self.root / 'private-state'
         self.package = self.make_package('transport-autopilot')
 
-    def make_package(self, product, sequence=1, extra_runtime=b''):
+    def make_package(self, product, sequence=1, extra_runtime=b'', policy=None):
         package = self.root / (product + '-' + str(sequence))
         package.mkdir()
         payload = setup._engine().PRODUCTS[product]
         for name in ('install.py', 'core.py', 'platform_support.py', 'registration.py',
                      'legacy_payloads.json', 'mod.json', 'thumbnail.png', payload):
             (package / name).write_bytes(b'{}')
-        (package / payload).write_text(json.dumps({'gameVersions': ['1.1.3']}), encoding='utf-8')
+        payload_data = {'gameVersions': ['1.1.3']}
+        if policy is not None:
+            payload_data['compatibilityPolicy'] = policy
+        (package / payload).write_text(json.dumps(payload_data), encoding='utf-8')
         sources = {'auto_update.py': 'engine.py', 'update_signature.py': 'signature.py',
                    'update_setup.py': 'setup.py', 'update_launcher.py': 'launcher.py'}
         for target, source in sources.items():
@@ -61,6 +64,8 @@ class SetupLauncherTests(unittest.TestCase):
         (package / 'update_trust.py').write_text('PUBLIC_KEY = ' + repr(self.signer.public_key) + '\n', encoding='utf-8')
         manifest = {'schema': 1, 'product': product, 'version': '1.0.' + str(sequence), 'sequence': sequence,
                     'minimum_updater': 1, 'game_versions': ['1.1.3'], 'files': {}}
+        if policy is not None:
+            manifest['compatibility_policy'] = policy
         for path in package.iterdir():
             data = path.read_bytes()
             manifest['files'][path.name] = {'sha256': hashlib.sha256(data).hexdigest(), 'size': len(data)}
@@ -201,14 +206,6 @@ class SetupLauncherTests(unittest.TestCase):
             path.write_bytes(source.replace(before, after).encode('utf-8'))
         self.resign(self.package)
 
-    def test_legacy_runtime_fixture_handles_crlf_sources(self):
-        for filename in ('auto_update.py', 'update_setup.py'):
-            path = self.package / filename
-            path.write_bytes(path.read_text(encoding='utf-8').replace('\n', '\r\n').encode('utf-8'))
-        self.legacy_runtime()
-        self.assertEqual(setup._runtime_products(self.package), {'transport-autopilot', 'tourism-dashboard'})
-        self.assertIn(b"len(value['products']) > 2", (self.package / 'update_setup.py').read_bytes())
-
     def resign(self, package):
         manifest_path = package / 'release-manifest.json'
         value = json.loads(manifest_path.read_bytes())
@@ -264,8 +261,14 @@ class SetupLauncherTests(unittest.TestCase):
         steam.configure.side_effect = ValueError('Steam must close safely first')
         with self.assertRaisesRegex(ValueError, 'Steam must close'):
             self.enroll(package, steam_helper=steam, steam_consent=True)
-        pending = json.loads((self.state / 'config.json').read_bytes())
+        active = json.loads((self.state / 'config.json').read_bytes())
+        self.assertEqual(active['runtime'], str(old_runtime))
+        pending = json.loads((self.state / setup.ENROLLMENT_PENDING).read_bytes())['next']
         self.assertNotEqual(pending['runtime'], str(old_runtime))
+        # An unchanged old Steam line must still be able to run its trusted gate.
+        process = mock.Mock(return_value='old-launched')
+        self.assertEqual(self.runtime_launcher().launch(self.state / 'config.json',
+            [str(self.executable)], updater=self.updater, popen=process), 'old-launched')
         self.assertTrue((old_runtime / 'update_launcher.py').is_file())
         # The real helper's private journal recognizes its prior generated
         # field; a retry must keep the same complete signed generation.
@@ -274,6 +277,52 @@ class SetupLauncherTests(unittest.TestCase):
         result = self.enroll(package, steam_helper=steam, steam_consent=True)
         self.assertEqual(json.loads(result.config.read_bytes())['runtime'], pending['runtime'])
         self.assertTrue(result.steam_configured)
+
+    def test_new_steam_line_recovers_crash_before_config_commit(self):
+        self.legacy_runtime()
+        self.enroll()
+        before = (self.state / 'config.json').read_bytes()
+        package = self.make_package('vaccination-autopilot')
+        helper = mock.Mock()
+        # Simulates process loss after Steam atomically switches its launch line.
+        helper.configure.side_effect = KeyboardInterrupt('after Steam switch')
+        with self.assertRaises(KeyboardInterrupt):
+            self.enroll(package, steam_helper=helper, steam_consent=True)
+        self.assertEqual((self.state / 'config.json').read_bytes(), before)
+        pending = json.loads((self.state / setup.ENROLLMENT_PENDING).read_bytes())
+        runtime = Path(pending['next']['runtime'])
+        spec = importlib.util.spec_from_file_location('_pending_launcher_test', runtime / 'update_launcher.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        process = mock.Mock(return_value='new-launched')
+        self.assertEqual(module.launch(self.state / 'config.json', [str(self.executable)],
+                                      updater=self.updater, popen=process), 'new-launched')
+        process.assert_called_once()
+        helper.configure.side_effect = None
+        helper.configure.return_value = SimpleNamespace(launch_options='recovered line')
+        result = self.enroll(package, steam_helper=helper, steam_consent=True)
+        self.assertEqual(json.loads(result.config.read_bytes()), pending['next'])
+        self.assertFalse((self.state / setup.ENROLLMENT_PENDING).exists())
+
+    def test_pending_enrollment_rejects_changed_previous_config_and_foreign_runtime(self):
+        self.legacy_runtime()
+        self.enroll()
+        helper = mock.Mock()
+        helper.configure.side_effect = ValueError('Steam failed')
+        with self.assertRaises(ValueError):
+            self.enroll(self.make_package('vaccination-autopilot'), steam_helper=helper)
+        journal = self.state / setup.ENROLLMENT_PENDING
+        pending = json.loads(journal.read_bytes())
+        current = json.loads((self.state / 'config.json').read_bytes())
+        pending['previous']['profile'] = str(self.root / 'foreign-profile')
+        journal.write_text(json.dumps(pending))
+        with self.assertRaisesRegex(ValueError, 'pending updater enrollment'):
+            setup._launcher_config(setup._engine(), self.state / 'config.json', Path(pending['next']['runtime']))
+        pending['previous'] = current
+        pending['next']['game'] = str(self.root / 'foreign/resources/app.asar')
+        journal.write_text(json.dumps(pending))
+        with self.assertRaisesRegex(ValueError, 'does not belong'):
+            setup._launcher_config(setup._engine(), self.state / 'config.json', Path(pending['next']['runtime']))
 
     def test_third_product_tamper_cannot_migrate_pinned_runtime_or_registration(self):
         self.legacy_runtime()
@@ -290,6 +339,23 @@ class SetupLauncherTests(unittest.TestCase):
         for path in (self.root / 'runtime', self.state / 'runtime-../escape', self.state / 'runtime-untrusted'):
             with self.assertRaises(ValueError):
                 setup._runtime_path(self.state, path)
+
+    def test_signed_exact_hook_policy_upgrades_pinned_runtime_capability(self):
+        self.enroll()
+        runtime = self.state / 'runtime'
+        engine_file = runtime / 'auto_update.py'
+        engine_file.chmod(0o600)
+        engine_file.write_text(engine_file.read_text().replace("RUNTIME_CAPABILITIES = ('exact-hooks-v1',)", 'RUNTIME_CAPABILITIES = ()'))
+        old = {p.name:p.read_bytes() for p in runtime.iterdir()}
+        package = self.make_package('transport-autopilot', 2,
+            policy={'mode':'exact-hooks','minimumGameVersion':'1.1.4'})
+        result = self.enroll(package)
+        current = Path(json.loads(result.config.read_text())['runtime'])
+        self.assertNotEqual(runtime, current)
+        self.assertIn('exact-hooks-v1', setup._runtime_capabilities(current))
+        self.assertEqual({p.name:p.read_bytes() for p in runtime.iterdir()}, old)
+        self.enroll(package)
+        self.assertEqual(json.loads(result.config.read_text())['runtime'], str(current))
 
     def test_manual_enrollment_uses_cached_engine_and_explicit_key_without_source_imports(self):
         engine = setup._engine()
@@ -702,17 +768,27 @@ class SetupLauncherTests(unittest.TestCase):
         self.assertFalse((self.state / 'last-error.txt').exists())
 
     @unittest.skipUnless(os.name == 'nt', 'Native Windows security API acceptance')
+    def test_windows_private_cache_can_be_revalidated(self):
+        self.enroll()
+        setup._private(self.state)
+        setup._private(self.state / 'runtime')
+
+
+    def test_legacy_runtime_fixture_handles_crlf_sources(self):
+        for filename in ('auto_update.py', 'update_setup.py'):
+            path = self.package / filename
+            path.write_bytes(path.read_text(encoding='utf-8').replace('\n', '\r\n').encode('utf-8'))
+        self.legacy_runtime()
+        self.assertEqual(setup._runtime_products(self.package), {'transport-autopilot', 'tourism-dashboard'})
+        self.assertIn(b"len(value['products']) > 2", (self.package / 'update_setup.py').read_bytes())
+
+
+    @unittest.skipUnless(os.name == 'nt', 'Native Windows security API acceptance')
     def test_windows_existing_inherited_cache_is_rejected(self):
         shared = self.root / 'untrusted-existing-cache'
         shared.mkdir()
         with self.assertRaisesRegex(ValueError, 'owned exclusively'):
             setup._private(shared)
-
-    @unittest.skipUnless(os.name == 'nt', 'Native Windows security API acceptance')
-    def test_windows_private_cache_can_be_revalidated(self):
-        self.enroll()
-        setup._private(self.state)
-        setup._private(self.state / 'runtime')
 
 
 if __name__ == '__main__':

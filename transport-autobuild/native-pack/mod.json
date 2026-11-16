@@ -1,11 +1,13 @@
 {
   "id": "littleguydev-transport-autopilot",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "contentApi": 1,
   "tier": "presentation",
   "name": "Transport Autopilot",
   "description": "Automatically expands roads, freeways, rail, and useful pipeline and port upgrades you control, within your construction budget. Set your budget and transport choices in Transport Room > Build > Transport Autopilot. Enable or disable this mod here, then restart the game. Manual installation is required after subscribing: run install.bat on Windows or sh install.sh on Mac. By Little Guy Dev.",
-  "authors": ["Little Guy Dev"],
+  "authors": [
+    "Little Guy Dev"
+  ],
   "requires": [],
   "thumbnail": "thumbnail.png",
   "provides": {}

@@ -466,7 +466,7 @@
       var ctrl = element('div', 'set-ctrl'), button = element('button', 'k', 'Open'); button.type = 'button'; button.addEventListener('click', open); ctrl.appendChild(button); row.appendChild(ctrl); pane.appendChild(row);
     }
   }
-  window.__transportAutobuildUI = { open: open, close: close, install: install, version: '1.1.0', settings: {
+  window.__transportAutobuildUI = { open: open, close: close, install: install, version: '1.1.1', settings: {
     read: function (getSession) { return settingsRequest(getSession, 'transport_auto_state'); },
     save: function (getSession, value) { return settingsRequest(getSession, 'transport_auto_config', [JSON.stringify(validateSettings(value))]); }
   } };

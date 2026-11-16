@@ -14,7 +14,7 @@ From the repository root:
 python3 scripts/build_unsigned.py
 ```
 
-This creates the manual-install folder `build/Transport-Autopilot/` and ZIP `build/Transport-Autopilot-1.1.0-unsigned.zip`. It does not modify an installed game. Keep the generated folder together, close the game, then use its normal installer. Contributor builds support **manual updates only**; they contain no updater enrollment or publisher authentication files. Generated files are ignored by Git.
+This creates the manual-install folder `build/Transport-Autopilot/` and ZIP `build/Transport-Autopilot-1.1.1-unsigned.zip`. It does not modify an installed game. Keep the generated folder together, close the game, then use its normal installer. Contributor builds support **manual updates only**; they contain no updater enrollment or publisher authentication files. Generated files are ignored by Git.
 
 The lower-level command `python3 transport-autobuild/build.py` creates the intermediate `transport-autobuild/dist/`. That intermediate includes updater helpers without a signed manifest and is not an install-ready package; use `scripts/build_unsigned.py` for a contributor build. `--no-automatic` alone does not make incomplete signed-package contents acceptable.
 
@@ -46,4 +46,4 @@ The renderer sends state, configuration, and run requests to the worker. The pla
 
 The installer recognizes exact supported patch anchors and owned historical payloads, preserves unrelated content, and uses verified backups and recoverable transactions. The updater authenticates enrolled packages before applying changes and launching the game. Unknown game changes, incomplete packages, or failed verification stop with an error.
 
-Keep the current support target explicit: Transport Autopilot **1.1.0**, Geoplanetical **1.1.3 / Steam build 26651281**. Check compatibility against a new game build before claiming support. Follow [CONTRIBUTING.md](../CONTRIBUTING.md) for pull requests.
+Keep the current tested target explicit: Transport Autopilot **1.1.1**, Geoplanetical **1.1.4 / Steam build 26709373**. The payload separately declares an `exact-hooks` compatibility policy with minimum stable game version `1.1.4`. Later stable versions may try the unchanged hooks; all ownership, integrity and unique-match checks still apply. Do not add a future version to the officially tested list without evidence from that build. Signed releases repeat this policy in their authenticated manifest, and enrollment migrates to an immutable runtime that advertises `exact-hooks-v1` while retaining the earlier runtime and trust key. Follow [CONTRIBUTING.md](../CONTRIBUTING.md) for pull requests.

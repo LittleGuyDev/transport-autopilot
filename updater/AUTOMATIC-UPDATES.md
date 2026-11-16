@@ -1,3 +1,9 @@
+# Future-version policy (prepared 1.1.1 update)
+
+The signed release's tested game versions are distinct from its compatibility policy. `exact-hooks` with minimum stable version `1.1.4` permits newer stable versions only when the normal exact patch, ownership and integrity checks pass. A changed hook still stops installation. Older signed packages without this policy keep their original exact version list.
+
+Existing users must run the downloaded complete installer once to enroll an immutable `exact-hooks-v1` runtime signed by the same pinned publisher key. The prior runtime remains available; a bounded enrollment journal handles interruption between the Steam launch-option change and config commit. No unsigned downloaded updater can replace the trusted runtime. A matching hook is not a guarantee of full gameplay compatibility, so release notes continue to identify the officially tested version.
+
 # Automatic updates for Transport Autopilot and Tourism Dashboard
 
 Run each mod's installer once; it sets up Steam automatically. After that,

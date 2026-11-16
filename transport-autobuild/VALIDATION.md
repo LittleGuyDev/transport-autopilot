@@ -1,3 +1,15 @@
+# Current prepared release — 1.1.1 / Geoplanetical 1.1.4
+
+Native Mac acceptance used Geoplanetical 1.1.4, Steam build 26709373. The complete installed mod stack passed a 31-day copied-campaign simulation and save reopen with no critical/reference/type diagnostics. Transport's native engine checks passed; the normal installed Steam game reached its main menu with all 13 installed mod entries active. In a separate app and copied profile, the Transport Room launcher and Overview, Settings and Projects tabs displayed current report, budget and permission data. No real campaign was loaded or advanced by the window checks. All 31 original saves retained exact bytes and modification times.
+
+The installer tests cover later stable versions with unchanged exact hooks, rejection of changed hooks, malformed policies and versions, preservation of strict older packages, ownership and transaction recovery. Updater tests cover signed-policy agreement and immutable runtime-capability migration, including a crash between the Steam launch-line switch and config commit. The public source retains the previously validated Windows native-ACL and explicit UTF-8 child-process fixes.
+
+**Limits:** native Windows 1.1.4 gameplay has not been accepted. Synthetic tests and older Windows installation tests are not a Windows 1.1.4 playthrough. Matching hook text permits a future version to be tried but does not establish semantic compatibility. The official tested target remains 1.1.4 until a later build is actually checked. The 1.1.1 Workshop upload is pending; source publication does not change installed Workshop files.
+
+Current public source checks passed 107 installer tests and 139 updater tests (three native Windows-only checks skipped on Mac), plus 51 simulation tests, 47 adapter checks, activation, manager and UI structure checks. The unsigned contributor package built successfully and its gameplay payload matched the canonical 1.1.1 package exactly.
+
+The records below describe earlier snapshots and retain their original scope.
+
 # Compatibility and validation
 
 Transport Autopilot **1.1.0** targets **Geoplanetical 1.1.3 / Steam build 26651281**, on Windows and native Mac. The installer checks supported game identity, exact patch anchors, owned payloads, and archive integrity. A later game update is not automatically supported.

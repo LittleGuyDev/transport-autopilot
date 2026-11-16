@@ -6,9 +6,9 @@ var __geoTransportAdapter = (() => {
   const pos=x=>Math.max(0,num(x));
   const keyOf=x=>x==null?null:String(typeof x==="object"?(x.key??x.id??x.actorId):x);
   const actorName=(sim,key)=>key==null?"Shared route":String(sim.countries?.get?.(String(key))?.name||key);
-  const portZone=a=>a?.maritimeZoneId?String(a.maritimeZoneId):Lle(sL(a?.provinceKey,[num(a?.lon),num(a?.lat)]),num(a?.lon),num(a?.lat));
+  const portZone=a=>a?.maritimeZoneId?String(a.maritimeZoneId):xce(AG(a?.provinceKey,[num(a?.lon),num(a?.lat)]),num(a?.lon),num(a?.lat));
   const transportProjects=(sim,key)=>(sim.construction||[]).filter(p=>p?.kind==="transport"&&String(p.owner)===key&&p.deliveryApplied!==true);
-  const capacity=(kind,item,mode)=>{const m=kind==="corridor"?(item.modes||[]).find(m=>(m.id||m)===mode):null;return pos(ms(kind,item,mode,m));};
+  const capacity=(kind,item,mode)=>{const m=kind==="corridor"?(item.modes||[]).find(m=>(m.id||m)===mode):null;return pos(Rs(kind,item,mode,m));};
   const corridorFactor=(c,mode)=>{const m=(c.modes||[]).find(m=>(m.id||m)===mode);return pos(m?.capacity)>0?capacity("corridor",c,mode)/pos(m.capacity):0;};
   // Native Bie also considers other segments of the same pipeline. Keep an additional
   // direct ownership/hosting guard so a foreign sibling cannot become an automatic target.
@@ -19,10 +19,10 @@ var __geoTransportAdapter = (() => {
     if(prior?.demands===demands&&prior?.solve===solve&&prior?.epoch===epoch&&prior?.key===key)return prior.requested;
     const slot=view.actors.get(key)?.slots?.land;
     if(slot==null)return undefined;
-    let requested=0;const access=X7e(),vectors=solve.resultVectors;
+    let requested=0;const access=vve(),vectors=solve.resultVectors;
     for(let i=0;i<demands.length;i++) {
       const load=pos(vectors?.requestedLoad?.[i]);if(!(load>0))continue;
-      const plan=bPe(sim,view,demands[i],access);
+      const plan=Vwe(sim,view,demands[i],access);
       if(plan?.available&&plan.slots.includes(slot))requested+=load;
     }
     cache.set(sim,{demands,solve,epoch,key,requested});return requested;
@@ -41,7 +41,7 @@ var __geoTransportAdapter = (() => {
     };
     if(!validVector(reportedVectors.requestedLoad)||!validVector(reportedVectors.deliveredLoad))return empty;
     const target=Math.max(.5,Math.min(.95,num(options.target,.8))),solve=tr.lastSolve,demands=tr.lastDemands||[],vectors=solve.resultVectors||{};
-    const view=YR(sim),slots=view.slots,slotById=new Map(slots.map(s=>[`${s.kind}|${s.id}|${s.mode}`,s]));
+    const view=sE(sim),slots=view.slots,slotById=new Map(slots.map(s=>[`${s.kind}|${s.id}|${s.mode}`,s]));
     const assets=new Map((network.assets||[]).map(a=>[String(a.id),a])),corridors=new Map((network.corridors||[]).map(c=>[String(c.id),c]));
     const projects=transportProjects(sim,key),groups=new Map();
     let requested=0,delivered=0;
@@ -92,13 +92,13 @@ var __geoTransportAdapter = (() => {
         }
         if(p.projectType==="terminal_upgrade"&&sourceIds.has(String(plan.targetId||p.targetId))&&slot.mode===`${plan.fluid}_terminal`) {
           const asset=assets.get(String(plan.targetId||p.targetId));if(!asset)continue;
-          const copy=G2(asset);mPe(sim,copy,plan.fluid,plan.toLevel,{source:"constructed"});
+          const copy=rp(asset);Fwe(sim,copy,plan.fluid,plan.toLevel,{source:"constructed"});
           forecast+=Math.max(0,capacity("asset",copy,`${plan.fluid}_pipeline`)-capacity("asset",asset,`${plan.fluid}_pipeline`));
         }
       }
       return forecast;
     };
-    const routeAccess=X7e(),routesByGroup=new Map();
+    const routeAccess=vve(),routesByGroup=new Map();
     const slotUsed=slot=>{
       if(slot.kind==="corridor") {
         if(slot.members) {
@@ -149,7 +149,7 @@ var __geoTransportAdapter = (() => {
       const matched=new Set();
       for(let i=0;i<demands.length;i++) {
         if(!involvement(demands[i])||!(pos(vectors.requestedLoad?.[i])>0))continue;
-        const plan=bPe(sim,view,demands[i],routeAccess);if(!plan?.available)continue;
+        const plan=Vwe(sim,view,demands[i],routeAccess);if(!plan?.available)continue;
         for(const index of plan.slots||[]) {
           const targets=queuedBySlot.get(index);if(!targets?.size)continue;
           targets.forEach(id=>matched.add(id));
@@ -170,7 +170,7 @@ var __geoTransportAdapter = (() => {
       const index=slots.indexOf(slot),pendingRoutes=sharedPendingClaims();let best=0,known=false;
       if(pendingRoutes.unknown) {g.sharedQueue=true;g.queueEvidence="unmapped";g.sharedProjectIds=new Set(pendingRoutes.unknownProjectIds);}
       for(const i of g.indices) {
-        const plan=bPe(sim,view,demands[i],routeAccess);
+        const plan=Vwe(sim,view,demands[i],routeAccess);
         if(!plan?.available||!plan.slots?.includes(index))continue;
         let room=Infinity,valid=true;
         for(const otherIndex of plan.slots) {
@@ -224,7 +224,7 @@ var __geoTransportAdapter = (() => {
           const targetKey=`${c.id}|${g.mode}`,pending=pos(pendingCorridor.get(targetKey));
           if(seenTargets.has(targetKey)||pending>EPS)continue;
           const factor=corridorFactor(c,g.mode);if(!(factor>0))continue;
-          const tiers=QN[W0(g.mode)]||[];if(!tiers.length)continue;
+          const tiers=vG[J0(g.mode)]||[];if(!tiers.length)continue;
           // A bundled path is limited by its lowest serial segment. Buying an
           // owned segment cannot improve delivery while an unchanged foreign
           // (or another unqueued owned) segment remains at the same minimum.
@@ -244,13 +244,13 @@ var __geoTransportAdapter = (() => {
           }
           attainableGain=Math.min(attainableGain,Math.max(0,headroom-g.pendingCapacity));
           if(!(attainableGain>EPS)) {g.foreignSerial=g.foreignSerial||foreignSerial;g.ownSerial=g.ownSerial||ownSerial;continue;}
-          const fullPhysical=Oat(g.mode,Cle(sim,g.mode,attainableGain/factor));
+          const fullPhysical=mnt(g.mode,Sce(sim,g.mode,attainableGain/factor));
           const specForPhysical=physicalCapacityAdd=>({projectType:"extension",terrainId:"plain",targetId:String(c.id),modeId:g.mode,physicalCapacityAdd});
-          const spec=specForPhysical(fullPhysical),q=pS(sim,key,spec);
+          const spec=specForPhysical(fullPhysical),q=kS(sim,key,spec);
           if(!q?.ok) {g.nativeReason=String(q?.reason||"unavailable");continue;}
           const rawGain=pos(q.plan?.capacityAdd);if(!(rawGain>0))continue;
           seenTargets.add(targetKey);
-          const specForScale=fraction=>specForPhysical(Oat(g.mode,Math.max(tiers[0],fullPhysical*Math.max(0,Math.min(1,num(fraction))))));
+          const specForScale=fraction=>specForPhysical(mnt(g.mode,Math.max(tiers[0],fullPhysical*Math.max(0,Math.min(1,num(fraction))))));
           candidates.push({kind:g.mode,spec,targetId:String(c.id),label:`${modeLabel} — ${String(c.name||c.id)}`,blockerId:g.id,need,gain:rawGain*factor,slotGain:Math.min(rawGain*factor,attainableGain),pending,minimumSpec:specForPhysical(tiers[0]),specForScale});
         }
       } else if(slot.kind==="asset"&&["sea","gas_terminal","oil_terminal"].includes(g.mode)) {
@@ -259,9 +259,9 @@ var __geoTransportAdapter = (() => {
           if(g.mode!=="sea") {
             const fluid=g.mode.slice(0,-9),targetKey=`${port.id}|${fluid}_terminal`;
             if(seenTargets.has(targetKey)||projects.some(p=>p.projectType==="terminal_upgrade"&&String(p.targetId)===String(port.id)&&p.transportPlan?.fluid===fluid))continue;
-            const spec={projectType:"terminal_upgrade",terrainId:"plain",targetId:String(port.id),fluid},q=pS(sim,key,spec);
+            const spec={projectType:"terminal_upgrade",terrainId:"plain",targetId:String(port.id),fluid},q=kS(sim,key,spec);
             if(!q?.ok) {g.nativeReason=String(q?.reason||"unavailable");continue;}
-            const copy=G2(port);mPe(sim,copy,fluid,q.plan.toLevel,{source:"constructed"});
+            const copy=rp(port);Fwe(sim,copy,fluid,q.plan.toLevel,{source:"constructed"});
             const gain=Math.max(0,capacity("asset",copy,`${fluid}_pipeline`)-capacity("asset",port,`${fluid}_pipeline`));
             if(!(gain>EPS))continue;seenTargets.add(targetKey);
             candidates.push({kind:"port",spec,targetId:String(port.id),sourcePortId:String(port.id),label:`${fluid==="gas"?"Gas":"Oil"} terminal — ${String(port.name||port.id)}`,blockerId:g.id,need,gain,slotGain:Math.min(gain,remainingHeadroom),pending:0});
@@ -269,12 +269,12 @@ var __geoTransportAdapter = (() => {
           }
           const targetKey=`port-site|${port.provinceKey}|${port.lon}|${port.lat}`;
           if(seenTargets.has(targetKey)||projects.some(p=>p.projectType==="new_asset"&&p.transportPlan?.asset?.assetClass==="port"&&sameSite(port,p.transportPlan.asset)))continue;
-          const country=sim.countries.get(key),site=e$(sim,country,num(port.lat),num(port.lon),{maxDistanceDeg:1e-5});
+          const country=sim.countries.get(key),site=M$(sim,country,num(port.lat),num(port.lon),{maxDistanceDeg:1e-5});
           if(!site?.ok||String(site.provKey)!==String(port.provinceKey)) {g.nativeReason=String(site?.reason||"site_not_coastal");continue;}
-          const portSize=Math.max(1,Math.min(w7.port.standardPorts.length,w7.port.standardPorts.findIndex(n=>n*FT(network)>=Math.min(need,remainingHeadroom))+1||w7.port.standardPorts.length));
-          const id=xzr(network,key,`autobuild:${port.id}`,projects);
+          const portSize=Math.max(1,Math.min(F7.port.standardPorts.length,F7.port.standardPorts.findIndex(n=>n*iN(network)>=Math.min(need,remainingHeadroom))+1||F7.port.standardPorts.length));
+          const id=jJr(network,key,`autobuild:${port.id}`,projects);
           const specForSize=size=>({projectType:"new_asset",terrainId:"plain",portSize:size,asset:{id,assetClass:"port",lat:num(port.lat),lon:num(port.lon),provinceKey:String(port.provinceKey),maritimeZoneId:portZone(port),maritimeClassification:port.maritimeClassification,modes:["sea","land"],capabilities:["seaport","bulk_terminal","chemical_terminal","vehicle_terminal","heavy_lift","dry_storage"]}});
-          const spec=specForSize(portSize),q=pS(sim,key,spec);
+          const spec=specForSize(portSize),q=kS(sim,key,spec);
           if(!q?.ok) {g.nativeReason=String(q?.reason||"unavailable");continue;}
           const gain=pos(q.plan?.designCapacity);if(!(gain>EPS))continue;
           seenTargets.add(targetKey);

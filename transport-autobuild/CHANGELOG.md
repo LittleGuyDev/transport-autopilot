@@ -1,13 +1,17 @@
-# Transport Autopilot
+# Transport Autopilot 1.1.1
 
-## Unreleased source changes
+- Officially tested with Geoplanetical 1.1.4 (Steam build 26709373) on native Mac.
+  The package includes Windows installers; native Windows 1.1.4 gameplay has not
+  been verified.
+- Updated game hooks and preserved existing campaign settings, budgets and
+  projects.
+- Later stable game versions can be tried when the required code hooks and
+  integrity checks pass. A new version number alone no longer blocks installation;
+  compatibility with future game behavior is not guaranteed.
+- Run the included installer once after downloading this release to activate the
+  new signed updater capability. The previous runtime and publisher key are kept.
 
-- On Windows, the updater now validates its private cache by its actual owner
-  and access rules, so a cache it created can be checked again. Isolated update
-  workers also use UTF-8 for diagnostics. These fixes are not in the existing
-  signed 1.1.0 package; a future signed release is needed to deliver them.
-
-## 1.1.0
+# Transport Autopilot 1.1.0
 
 - A clearer panel with Overview, Settings and Projects tabs. See what needs
   attention, adjust your choices, and follow construction in one place.

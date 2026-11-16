@@ -10,6 +10,7 @@ import copy
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import stat
 import struct
@@ -20,6 +21,34 @@ from dataclasses import dataclass
 
 class InstallError(RuntimeError):
     """A safe precondition failed; the caller should show this to the user."""
+
+
+
+def validate_compatibility_policy(payload):
+    """Validate signed release policy independently of the selected game."""
+    policy = payload.get('compatibilityPolicy')
+    if policy is None:
+        return
+    if (not isinstance(policy, dict) or set(policy) != {'mode', 'minimumGameVersion'} or
+            policy.get('mode') != 'exact-hooks' or _release_version(policy.get('minimumGameVersion')) is None):
+        raise InstallError('Invalid exact-hook compatibility policy.')
+
+
+def _release_version(value):
+    if not isinstance(value, str) or not re.fullmatch(r'(?:0|[1-9][0-9]{0,3})\.(?:0|[1-9][0-9]{0,3})\.(?:0|[1-9][0-9]{0,3})', value):
+        return None
+    return tuple(map(int, value.split('.')))
+
+
+def allows_game_version(game, payload):
+    """Newer stable releases may try the same exact, fail-closed hooks."""
+    validate_compatibility_policy(payload)
+    version = game.get('version')
+    policy = payload.get('compatibilityPolicy')
+    if policy is None:
+        return version in payload.get('gameVersions', [])
+    parsed = _release_version(version)
+    return parsed is not None and parsed >= _release_version(policy['minimumGameVersion'])
 
 
 def _is_link(path: Path) -> bool:

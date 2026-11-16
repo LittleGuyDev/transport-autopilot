@@ -102,7 +102,7 @@ def launch(config_path, original_args=None, *, public_key=None, popen=None,
     state = setup._private(config_path.parent)
     if config_path.name != 'config.json':
         raise ValueError('Launcher requires its enrolled config.json')
-    config = setup._config(engine, config_path)
+    config = setup._launcher_config(engine, config_path, HERE)
     runtime = setup._absolute(config['runtime'])
     if runtime != HERE or config_path.parent != HERE.parent or setup._runtime_path(state, runtime) != HERE:
         raise ValueError('Registration does not belong to this trusted launcher runtime')
@@ -120,7 +120,7 @@ def launch(config_path, original_args=None, *, public_key=None, popen=None,
     opened = []
 
     def enrollment_unchanged():
-        if setup._config(engine, config_path) != config:
+        if setup._launcher_config(engine, config_path, HERE) != config:
             raise ValueError('Mod enrollment changed; launch again to use its current registration')
 
     def ready(result):

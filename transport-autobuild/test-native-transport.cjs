@@ -17,6 +17,7 @@ const globals={console,Map,Set,WeakMap,Number,Math,String,Object,Array,JSON,
   return {ok:true,plan:{toLevel:2},costBn:1,months:10};
  }
 };
+const nativeNames={"g8": "E8", "ms": "Rs", "X7e": "vve", "FT": "iN", "mPe": "Fwe", "QN": "vG", "W0": "J0", "Cle": "Sce", "Oat": "mnt", "YR": "sE", "bPe": "Vwe", "Lle": "xce", "sL": "AG", "e$": "M$", "w7": "F7", "pS": "kS", "xzr": "jJr", "G2": "rp"};for(const [old,current] of Object.entries(nativeNames))if(old in globals)globals[current]=globals[old];
 globals.globalThis=globals;vm.runInNewContext(fs.readFileSync(path.join(__dirname,'native-transport.js'),'utf8'),globals);const adapter=globals.__geoTransportAdapter;
 const clone=x=>JSON.parse(JSON.stringify(x));
 function fixture(mode='gas_pipeline') {

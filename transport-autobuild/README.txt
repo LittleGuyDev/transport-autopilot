@@ -1,7 +1,16 @@
-TRANSPORT AUTOPILOT — AUTO TRANSPORT CONSTRUCTION 1.1.0
-By Little Guy Dev. Made for Geoplanetical 1.1.3.
+TRANSPORT AUTOPILOT — AUTO TRANSPORT CONSTRUCTION 1.1.1
+By Little Guy Dev. Made for Geoplanetical 1.1.4.
 
-WHAT'S NEW IN 1.1.0
+WHAT'S NEW IN 1.1.1
+- Updated for Geoplanetical 1.1.4, officially tested on native Mac. Windows
+  installers are included; native Windows 1.1.4 gameplay is not yet verified.
+- Future stable game versions can be tried when required code hooks and
+  integrity checks pass. A newer version number alone does not block this
+  release; changed game behavior can still require a mod update.
+- Run the included installer once after this download to activate the new
+  signed updater capability. Existing settings, budgets and projects are kept.
+
+ALSO INCLUDED FROM 1.1.0
 - A clearer panel with Overview, Settings and Projects tabs. See what needs
   attention, adjust your choices, and follow construction in one place.
 - Choose Keep expanding to keep building selected roads, freeways and rail
@@ -17,19 +26,19 @@ WHAT'S NEW IN 1.1.0
 - Faster installer checks, stronger Windows security checks, and a fix for
   reinstalling after removal. Backups and recovery checks are still included.
 
-UPDATING FROM 1.0.0
+UPDATING FROM 1.0.0 OR 1.1.0
 Save and close the game. To set up this release, run install.bat on Windows
 or install.command on Mac once and finish the Steam setup below. Future
 ordinary updates apply before the next Steam game launch. Your saved settings, other mods and
 construction already in progress are kept. The new Keep expanding option only
 starts applying after you choose it and save your settings.
-If you tried an earlier test build that also showed 1.1.0, run this installer
+If you tried an earlier test build that also showed 1.1.1, run this installer
 to update it too. The installer can tell the two builds apart.
 
 WHERE TO FIND IT
 Open Transport Room > Build > Transport Autopilot. You can also find it in
 Settings > Game, or search for Transport Autopilot with Command/Control+K.
-Manage mods lists Transport Autopilot 1.1.0. After enabling or disabling the
+Manage mods lists Transport Autopilot 1.1.1. After enabling or disabling the
 mod there, restart the game. Disabling keeps your settings and existing projects.
 Load order changes the position shown in Manage mods. It does not change how
 the installer applies the mod. View on Workshop opens this mod's Steam page.
@@ -139,7 +148,7 @@ Type cd and a space, drag the mod folder into Terminal, and press Return.
 Then type sh install.sh and press Return.
 
 The installer heading and final installed version should say Transport Autopilot
-1.1.0. The number under Existing Transport Autopilot identifies the copy
+1.1.1. The number under Existing Transport Autopilot identifies the copy
 currently installed. Keep the downloaded files together in this folder.
 
 AUTOMATIC UPDATES — SET UP BY THE INSTALLER
@@ -244,7 +253,7 @@ Mac Terminal alternative: follow the Terminal steps above, but type
 sh install.sh uninstall instead.
 
 COMPATIBILITY AND UPDATES
-Transport Autopilot 1.1.0 is made for Geoplanetical 1.1.3 / Steam build 26651281.
+Transport Autopilot 1.1.1 is made for Geoplanetical 1.1.4 / Steam build 26709373.
 Installation, removal and recovery have been checked on Mac and in a Windows
 virtual machine. Windows in-game display and a full desktop playthrough have
 not been checked. Detailed developer test records are in VALIDATION.md.
@@ -259,6 +268,12 @@ OPTIONAL SUPPORT
 Transport Autopilot is free. If you enjoy it, you can support Little Guy Dev:
   https://ko-fi.com/littleguydev
 Donations are optional and do not unlock features.
+
+GAME 1.1.4 COMPATIBILITY UPDATE — 2026-11-16
+Official compatibility is tested on Geoplanetical 1.1.4. Newer stable game
+versions may use this package when every exact native hook still matches.
+Changed hooks are refused before installation; no compatibility is claimed
+for future versions merely because their version number is newer.
 
 OPEN SOURCE
 Source code, development instructions and community contributions:
